@@ -3,10 +3,12 @@ const TelegramBot = require('node-telegram-bot-api');
 const settings = require('./settings');
 const mcuQuery = require("./mcuQuery");
 const serialListener = require("./serial");
+const dbManager = require("./dbManager");
 
 // replace the value below with the Telegram token you receive from @BotFather
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(settings.telegramToken, {polling: true});
+dbManager.connection.connect();
  
 // Matches "/echo [whatever]"
 bot.onText(/\/echo (.+)/, (msg, match) => {
@@ -26,7 +28,8 @@ bot.onText(/start/i, (msg, match) => {
         reply_markup: JSON.stringify({
             keyboard: [
             [{ text: '📟 Show sensors data' }],
-            [{ text: 'Another feature' }],
+            [{ text: '⛽ Add fuel entry' }],
+            [{ text: '🚗 Car logs' }],
             ]
         })
     };
@@ -44,11 +47,27 @@ bot.onText(/Show sensors data/i, (msg, match) => {
     });
 });
 
-bot.onText(/Another feature/i, (msg, match) => {
-    let message = 'test';
-    message += msg.chat.id;
-    message += '\r\n';
+bot.onText(/Add fuel entry/i, (msg, match) => {
+    let message = 'Please input "odometer;fuel amout; price"';
     bot.sendMessage(msg.chat.id, message);
+});
+
+bot.onText(/(\d.+);(\d.+);(\d.+)/i, (msg, match) => {
+    let odometer = parseInt(match[1]);
+    let fuel = parseFloat(match[2]);
+    let price = parseFloat(match[3]);
+    let message = `🔢: ${odometer}; ⛽: ${fuel}; 💲: ${price};`;
+    dbManager.addFuelEntry(msg.chat.id, odometer, fuel, price);
+    bot.sendMessage(msg.chat.id, message);
+});
+
+bot.onText(/Car logs/i, (msg, match) => {
+    dbManager.getLastEntry(msg.chat.id, 2, (data) => {
+        data = data ? data.reduce((acc, entry) => {
+             return acc += `🔢: ${entry.odometer}; ⛽: ${entry.fuel_amount};\r\n 💲: ${entry.price}; 💯: ${entry.consumption}\r\n-----\r\n`; 
+            }, 'Test\r\n') : 'No data';
+        bot.sendMessage(msg.chat.id, data);
+    })
 });
 
 serialListener(data => {

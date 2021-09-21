@@ -11,6 +11,7 @@
   "dependencies": {
     "cli-color": "^1.4.0",
     "clui": "^0.3.6",
+    "mysql2": "^2.3.0",
     "node-telegram-bot-api": "^0.30.0",
     "serialport": "^8.0.5"
   },
