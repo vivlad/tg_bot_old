@@ -1,4 +1,4 @@
-const settigs = {
+const settings = {
     'telegramToken': '',
     'subscriber': 1,
     'macAddress': '',
@@ -7,5 +7,6 @@ const settigs = {
     'dbUser': "user",
     'dbName': "usersdb",
     'dbPassword': "*",
+    'dbDialect': "mysql",
 }
-module.exports = settigs;
+module.exports = settings;

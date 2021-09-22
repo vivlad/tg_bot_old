@@ -3,7 +3,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const settings = require('./settings');
 const mcuQuery = require("./mcuQuery");
 const serialListener = require("./serial");
-const dbManager = require("./dbManager");
+const dbManager = require("./dbSequelize");
 
 // replace the value below with the Telegram token you receive from @BotFather
 // Create a bot that uses 'polling' to fetch new updates
@@ -62,11 +62,31 @@ bot.onText(/(\d.+);(\d.+);(\d.+)/i, (msg, match) => {
 });
 
 bot.onText(/Car logs/i, (msg, match) => {
-    dbManager.getLastEntry(msg.chat.id, 2, (data) => {
-        data = data ? data.reduce((acc, entry) => {
-             return acc += `🔢: ${entry.odometer}; ⛽: ${entry.fuel_amount};\r\n 💲: ${entry.price}; 💯: ${entry.consumption}\r\n-----\r\n`; 
-            }, 'Test\r\n') : 'No data';
-        bot.sendMessage(msg.chat.id, data);
+    dbManager.getLastMonthData(msg.chat.id, (data) => {
+        let preparedData = data ? data.reduce((acc, entry) => {
+                acc.totalFuelAmount += entry.fuelAmount;
+                acc.totalCost += entry.fuelAmount * entry.price;
+                acc.summaryConsumption += entry.consumption;
+            },
+            {
+                totalFuelAmount: 0,
+                totalCost: 0,
+                summaryConsumption: 0,
+            }
+        ) : null;
+        let message = '';
+        if (null !== preparedData) {
+            preparedData['avgConsumption'] = preparedData.summaryConsumption/data.length;
+            preparedData['lastConsumption'] = data[data.length-1].consumption;
+            preparedData['odometer'] = data[data.length-1].odometer - data[0].odometer;
+            preparedData['count'] = data.length;
+            message += `Count: ${preparedData.count}\\r\\n`;
+            message += `Latest 💯: ${preparedData.lastConsumption}\\r\\n`;
+            message += `🔢: ${preparedData.odometer}; ⛽: ${preparedData.totalFuelAmount};\\r\\n`;
+            message += `💲: ${preparedData.totalCost}; AVG/💯: ${preparedData.avgConsumption}\\r\\n`;
+        }
+
+        bot.sendMessage(msg.chat.id, message);
     })
 });
 

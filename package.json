@@ -11,9 +11,10 @@
   "dependencies": {
     "cli-color": "^1.4.0",
     "clui": "^0.3.6",
+    "moment": "^2.29.1",
     "mysql2": "^2.3.0",
     "node-telegram-bot-api": "^0.30.0",
+    "sequelize": "^6.6.5",
     "serialport": "^8.0.5"
-  },
-  "devDependencies": {}
+  }
 }
