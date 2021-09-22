@@ -8,7 +8,6 @@ const dbManager = require("./dbSequelize");
 // replace the value below with the Telegram token you receive from @BotFather
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(settings.telegramToken, {polling: true});
-dbManager.connection.connect();
  
 // Matches "/echo [whatever]"
 bot.onText(/\/echo (.+)/, (msg, match) => {
@@ -63,27 +62,33 @@ bot.onText(/(\d.+);(\d.+);(\d.+)/i, (msg, match) => {
 
 bot.onText(/Car logs/i, (msg, match) => {
     dbManager.getLastMonthData(msg.chat.id, (data) => {
-        let preparedData = data ? data.reduce((acc, entry) => {
-                acc.totalFuelAmount += entry.fuelAmount;
-                acc.totalCost += entry.fuelAmount * entry.price;
-                acc.summaryConsumption += entry.consumption;
-            },
-            {
-                totalFuelAmount: 0,
-                totalCost: 0,
-                summaryConsumption: 0,
+        let message = 'No data';
+        if (data.length > 0) {
+            let preparedData = data ? data.reduce((acc, entry) => {
+                    acc.totalFuelAmount += entry.fuelAmount;
+                    acc.totalCost += entry.fuelAmount * entry.price;
+                    acc.summaryConsumption += entry.consumption;
+
+                    return acc;
+                },
+                {
+                    totalFuelAmount: 0,
+                    totalCost: 0,
+                    summaryConsumption: 0,
+                }
+            ) : null;
+        
+            if (null !== preparedData) {
+                preparedData['avgConsumption'] = (preparedData.summaryConsumption/(data.length-1)).toFixed(2);//the first entry is always null
+                preparedData['lastConsumption'] = data[data.length-1].consumption.toFixed(2);
+                preparedData['odometer'] = data[data.length-1].odometer - data[0].odometer;
+                preparedData['count'] = data.length;
+                
+                message = `Latest 💯: ${preparedData.lastConsumption}\r\n`;
+                message += `Per month count: ${preparedData.count}\r\n`;
+                message += `🔢: ${preparedData.odometer}; ⛽: ${preparedData.totalFuelAmount};\r\n`;
+                message += `💲: ${preparedData.totalCost}; AVG/💯: ${preparedData.avgConsumption}\r\n`;
             }
-        ) : null;
-        let message = '';
-        if (null !== preparedData) {
-            preparedData['avgConsumption'] = preparedData.summaryConsumption/data.length;
-            preparedData['lastConsumption'] = data[data.length-1].consumption;
-            preparedData['odometer'] = data[data.length-1].odometer - data[0].odometer;
-            preparedData['count'] = data.length;
-            message += `Count: ${preparedData.count}\\r\\n`;
-            message += `Latest 💯: ${preparedData.lastConsumption}\\r\\n`;
-            message += `🔢: ${preparedData.odometer}; ⛽: ${preparedData.totalFuelAmount};\\r\\n`;
-            message += `💲: ${preparedData.totalCost}; AVG/💯: ${preparedData.avgConsumption}\\r\\n`;
         }
 
         bot.sendMessage(msg.chat.id, message);
